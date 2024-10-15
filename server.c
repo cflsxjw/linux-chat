@@ -179,7 +179,7 @@ void command_handler(char *cmd, char **args, int argc, user *curr_user) //NOLINT
         char time_str[40];
         get_localtime(time_str);
         char msg[BUFFER_SIZE];
-        sprintf(msg, "\033[38;5;81m%s\033[0m:%s  \033[38;5;114m[%s] \033[38;5;222m[private]\033[0m\n", curr_user->name, args[1], time_str);
+        sprintf(msg,  COLOR(222) "%s\033[0m:%s  \033[38;5;114m[%s] \033[38;5;222m[private]\033[0m\n", curr_user->name, args[1], time_str);
         for (int i = 0; i < pool_head; i++) {
             if (strcmp(users[i]->name, args[0]) == 0) {
                 send_to(msg, users[i]);
