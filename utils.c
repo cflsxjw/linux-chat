@@ -45,6 +45,7 @@ int split_command(const char *src, char *cmd, char **args)
             {
                 args[args_index] = malloc(sizeof(char) * (curr_index - curr_arg_head + 1));
                 strncpy(args[args_index], src + curr_arg_head, curr_index - curr_arg_head);
+                args[curr_index - curr_arg_head] = 0;
                 args_index++;
             }
             curr_arg_head = curr_index + 1;
@@ -57,4 +58,20 @@ int split_command(const char *src, char *cmd, char **args)
         strncpy(args[args_index], src + curr_arg_head, curr_index - curr_arg_head);
     }
     return args_index + 1;
+}
+
+void wrap_msg(char *msg) {
+    for (int i = 0; i < strlen(msg); i++) {
+        if (msg[i] == ' ') {
+            msg[i] = 127;
+        }
+    }
+}
+
+void unwrap_msg(char *msg) {
+    for (int i = 0; i < strlen(msg); i++) {
+        if (msg[i] == 127) {
+            msg[i] = ' ';
+        }
+    }
 }

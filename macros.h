@@ -6,7 +6,11 @@
 #define PROGRESS_BAR_LENGTH 50
 #define IP "127.0.0.1"
 #define MAX_NAME_LEN 30
+#define MAX_PASSWORD_LEN 30
 #define MAX_CONNECTIONS 100
+#define MAX_REG_USERS 1000
+#define MAX_COMMAND_LEN 15
+#define MAX_ARG_COUNT 20
 
 // terminal colors
 #define COLOR_RESET "\033[0m"
@@ -18,5 +22,7 @@
 #define COLOR_MAGENTA "\033[35m"
 #define COLOR_CYAN "\033[36m"
 #define COLOR_WHITE "\033[37m"
+
+#define COLOR(x) "\033[38;5;xm"
 
 #endif //CONSTS_H

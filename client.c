@@ -4,9 +4,8 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <pthread.h>
-#include <time.h>
-#include "c_command.h"
 #include "macros.h"
+#include "utils.h"
 
 int client_socket;
 
@@ -16,30 +15,10 @@ void get_localtime(char *buffer);
 
 int split_command(const char *src, char *cmd, char **args);
 void command_handler(char *cmd,char **args,int argc,char *input);
+int input_mask=0;
+void* get_input(void* input);
 
-void show_progress_bar()
-{
-    for (int i = 0; i <= PROGRESS_BAR_LENGTH; i++)
-    {
-        float percent = (float)i / PROGRESS_BAR_LENGTH * 100;
-        printf("\rProgress: [");
-        for (int j = 0; j < PROGRESS_BAR_LENGTH; j++)
-        {
-            if (j < i)
-            {
-                printf(COLOR_YELLOW "▮" COLOR_RESET); // Print yellow block
-            }
-            else
-            {
-                printf(" "); // Empty space
-            }
-        }
-        printf("] %.2f%%", percent);
-        fflush(stdout);
-        usleep(20000); // 20 ms delay for a total of 1 second
-    }
-    printf("\n");
-}
+void show_progress_bar();
 
 int main()
 {
@@ -58,7 +37,7 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-    show_progress_bar();
+    //show_progress_bar();
 
     pthread_t thread;
     pthread_create(&thread, NULL, receive_msg, (void *)(intptr_t)client_socket);
@@ -69,9 +48,6 @@ int main()
     name[strcspn(name,"\n")]='\0';
     write(client_socket, name, sizeof(name));
 
-    // 显示进度条前清空行
-    //printf("\r\n"); // 清空当前行并换行
-
     // 获取输入
     while (1)
     {
@@ -80,15 +56,14 @@ int main()
         input[strcspn(input,"\n")]='\0';
         if (input[0] == '/')
         {
-            char **args = malloc(sizeof(char *) * 9);
-            char *cmd = malloc(sizeof(char) * 16);
+            char **args = malloc(sizeof(char *) * MAX_ARG_COUNT);
+            char *cmd = malloc(sizeof(char) * MAX_COMMAND_LEN);
             int argc = split_command(input, cmd, args);
-            
+
             command_handler(cmd,args,argc,input);
 
             continue;
         }
-
         write(client_socket, strcat(input, "\0"), BUFFER_SIZE);
     }
 
@@ -116,11 +91,14 @@ void command_handler(char *cmd,char **args,int argc,char *input)
 {
     if (strcmp(cmd, "exit")==0 && argc == 0)
     {
-        cmd_exit();
+        close(client_socket);
+        exit(0);
     }
     if (strcmp(cmd, "time")==0 && argc == 0)
     {
-        cmd_time();
+        char local_time[40];
+        get_localtime(local_time);
+        printf("%s", local_time);
     }
     if (strcmp(cmd, "help")==0 && argc == 0)
     {
@@ -128,6 +106,55 @@ void command_handler(char *cmd,char **args,int argc,char *input)
     }
     if(strcmp(cmd,"get")==0 && argc ==1)
     {
-        cmd_get(input);
+        write(client_socket,input,BUFFER_SIZE);
     }
+    if(strcmp(cmd, "register") == 0 && argc == 2) {
+        write(client_socket,input,BUFFER_SIZE);
+    }
+    if(strcmp(cmd, "list_users") == 0 && argc == 0) {
+        write(client_socket,input,BUFFER_SIZE);
+    }
+    if(strcmp(cmd, "private") == 0 && argc == 1) {
+        char *msg = malloc(sizeof(char) * 100);
+        pthread_t thread;
+        pthread_create(&thread, NULL, get_input, msg);
+        pthread_join(thread, NULL);
+        input[strcspn(input,"\n")]=' ';
+        wrap_msg(msg);
+        strcat(input, msg);
+        write(client_socket, input, BUFFER_SIZE);
+        free(msg);
+    }
+}
+
+void *get_input(void* arg) {
+    char *msg = arg;
+    printf("input massage: ");
+    fgets(msg, 100, stdin);
+    msg[strcspn(msg,"\n")]=0;
+    pthread_exit(NULL);
+}
+
+void show_progress_bar()
+{
+    for (int i = 0; i <= PROGRESS_BAR_LENGTH; i++)
+    {
+        float percent = (float)i / PROGRESS_BAR_LENGTH * 100;
+        printf("\rProgress: [");
+        for (int j = 0; j < PROGRESS_BAR_LENGTH; j++)
+        {
+            if (j < i)
+            {
+                printf(COLOR_YELLOW "▮" COLOR_RESET);
+            }
+            else
+            {
+                printf(" ");
+            }
+        }
+        printf("] %.2f%%", percent);
+        fflush(stdout);
+        usleep(20000); // 20 ms delay for a total of 1 second
+    }
+    printf("\n");
 }
