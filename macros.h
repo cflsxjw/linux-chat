@@ -25,4 +25,9 @@
 
 #define COLOR(x) "\033[38;5;xm"
 
+// MASSAGE TYPES
+#define MASSAGE 1
+#define COMMAND 2
+#define RESPONSE 3
+
 #endif //CONSTS_H

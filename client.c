@@ -11,11 +11,9 @@ int client_socket;
 
 
 void *receive_msg(void *arg);
-void get_localtime(char *buffer);
 
-int split_command(const char *src, char *cmd, char **args);
 void command_handler(char *cmd,char **args,int argc,char *input);
-int input_mask=0;
+
 void* get_input(void* input);
 
 void show_progress_bar();
@@ -89,6 +87,13 @@ void *receive_msg(void *arg)
 
 void command_handler(char *cmd,char **args,int argc,char *input)
 {
+    if (strcmp(cmd, "help")==0 && argc == 0)
+    {
+        printf("    * exit: 退出程序\n");
+        printf("    * time: 打印当前时间\n");
+        printf("    * ls: 列出所有在线用户\n");
+        printf("    * private: 私信用户\n");
+    }
     if (strcmp(cmd, "exit")==0 && argc == 0)
     {
         close(client_socket);
@@ -100,18 +105,10 @@ void command_handler(char *cmd,char **args,int argc,char *input)
         get_localtime(local_time);
         printf("%s", local_time);
     }
-    if (strcmp(cmd, "help")==0 && argc == 0)
-    {
-        printf("11111");
-    }
-    if(strcmp(cmd,"get")==0 && argc ==1)
-    {
-        write(client_socket,input,BUFFER_SIZE);
-    }
     if(strcmp(cmd, "register") == 0 && argc == 2) {
         write(client_socket,input,BUFFER_SIZE);
     }
-    if(strcmp(cmd, "list_users") == 0 && argc == 0) {
+    if(strcmp(cmd, "ls") == 0 && argc == 0) {
         write(client_socket,input,BUFFER_SIZE);
     }
     if(strcmp(cmd, "private") == 0 && argc == 1) {
@@ -127,8 +124,8 @@ void command_handler(char *cmd,char **args,int argc,char *input)
     }
 }
 
-void *get_input(void* arg) {
-    char *msg = arg;
+void *get_input(void* input) {
+    char *msg = input;
     printf("input massage: ");
     fgets(msg, 100, stdin);
     msg[strcspn(msg,"\n")]=0;

@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <pthread.h>
+#include <stdarg.h>
 #include "utils.h"
 #include "macros.h"
 
@@ -11,6 +12,7 @@ typedef struct USER {
     int id;
     int socket_fd;
     char name[MAX_NAME_LEN];
+    char **mute;
     int verified;
 } user;
 
@@ -84,7 +86,7 @@ int main() {
         read(users[curr_id]->socket_fd, users[curr_id]->name, MAX_NAME_LEN);
 
         char msg[64];
-        sprintf(msg, "%s has joined in\n", users[curr_id]->name);
+        sprintf(msg, "\033[38;5;159m%s\033[0m has \033[38;5;40mjoined in\033[0m\n", users[curr_id]->name);
         broadcast(msg);
         // create new thread
         pthread_t thread;
@@ -117,10 +119,8 @@ void *new_user_thread(void *arg) {
             char msg[BUFFER_SIZE];
             char *time_str = malloc(40 * sizeof(char));
             get_localtime(time_str);
-
             snprintf(msg, BUFFER_SIZE + 128, "\033[36m[%s]\033[0m \033[32m%s\033[0m: %s\n", time_str, curr_user->name,
                      buffer);
-
             free(time_str);
             printf("%s", msg);
             broadcast(msg);
@@ -130,7 +130,9 @@ void *new_user_thread(void *arg) {
     id_pool[pool_head] = curr_user->id;
     char *time_str = malloc(40 * sizeof(char));
     get_localtime(time_str);
-    printf("%s quit  [%s]\n", curr_user->name, time_str);
+    char msg[BUFFER_SIZE];
+    sprintf(msg, "\033[38;5;159m%s\033[0m \033[38;5;160mquit\033[0m  [%s]\n", curr_user->name, time_str); //NOLINT
+    broadcast(msg);
     free(time_str);
     pthread_exit(NULL);
 }
@@ -151,9 +153,6 @@ void send_to(const char *msg, user *curr_user) {
 
 void command_handler(char *cmd, char **args, int argc, user *curr_user) //NOLINT
 {
-    if (strcmp(cmd, "get") == 0 && argc == 1) {
-        broadcast(strcat(args[0], "\n")); // NOLINT
-    }
     if (strcmp(cmd, "register") == 0 && argc == 2) {
         reg_users[reg_count] = malloc(sizeof(reg_user));
         strcpy(reg_users[reg_count]->name, args[0]); //NOLINT
@@ -166,7 +165,7 @@ void command_handler(char *cmd, char **args, int argc, user *curr_user) //NOLINT
     if (strcmp(cmd, "list_users") == 0 && argc == 0) {
         char buffer[BUFFER_SIZE] = "";
         for (int i = 0; i < pool_head; i++) {
-            int len = (int)strlen(users[i]->name);
+            int len = (int) strlen(users[i]->name);
             if (len > 0) {
                 strcat(buffer, users[i]->name);
                 strcat(buffer, "\n");
@@ -179,7 +178,8 @@ void command_handler(char *cmd, char **args, int argc, user *curr_user) //NOLINT
         char time_str[40];
         get_localtime(time_str);
         char msg[BUFFER_SIZE];
-        sprintf(msg,  COLOR(222) "%s\033[0m:%s  \033[38;5;114m[%s] \033[38;5;222m[private]\033[0m\n", curr_user->name, args[1], time_str);
+        sprintf(msg, "\033[38;5;222m%s\033[0m:%s  \033[38;5;114m[%s] \033[38;5;222m[private]\033[0m\n", curr_user->name,
+                args[1], time_str);
         for (int i = 0; i < pool_head; i++) {
             if (strcmp(users[i]->name, args[0]) == 0) {
                 send_to(msg, users[i]);
