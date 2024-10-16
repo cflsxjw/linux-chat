@@ -8,7 +8,7 @@
 #include "utils.h"
 
 int client_socket;
-
+char name[MAX_NAME_LEN];
 
 void *receive_msg(void *arg);
 
@@ -17,6 +17,7 @@ void command_handler(char *cmd,char **args,int argc,char *input);
 void* get_input(void* input);
 
 void show_progress_bar();
+
 
 int main()
 {
@@ -39,13 +40,20 @@ int main()
 
     pthread_t thread;
     pthread_create(&thread, NULL, receive_msg, (void *)(intptr_t)client_socket);
-
-    char name[30];
     printf("nickname: ");
-    fgets(name,15,stdin);
+    fgets(name,MAX_NAME_LEN,stdin);
     name[strcspn(name,"\n")]='\0';
-    write(client_socket, name, sizeof(name));
-
+    char *password = malloc(MAX_PASSWORD_LEN * sizeof(char));
+    disable_echo();
+    printf("password: ");
+    fgets(password,MAX_NAME_LEN,stdin);
+    password[strcspn(password,"\n")]='\0';
+    enable_echo();
+    char *user_info = malloc((MAX_NAME_LEN + MAX_PASSWORD_LEN + 3) * sizeof(char));
+    sprintf(user_info, "%s %s", name, password);
+    write(client_socket, user_info, MAX_NAME_LEN + MAX_PASSWORD_LEN + 3 * sizeof(char));
+    printf("\n");
+    free(password);
     // 获取输入
     while (1)
     {

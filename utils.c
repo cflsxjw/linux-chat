@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <termios.h>
+#include <unistd.h>
 #include "utils.h"
 
 void get_localtime(char* buffer) {
@@ -75,4 +77,18 @@ void unwrap_msg(char *msg) {
             msg[i] = ' ';
         }
     }
+}
+
+void disable_echo() {
+    struct termios tstate;
+    tcgetattr(STDIN_FILENO, &tstate);
+    tstate.c_lflag &= ~(ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &tstate);
+}
+
+void enable_echo() {
+    struct termios tstate;
+    tcgetattr(STDIN_FILENO, &tstate);
+    tstate.c_lflag |= (ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &tstate);
 }

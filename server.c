@@ -77,13 +77,38 @@ int main() {
             close(socket_fd);
             continue;
         }
+        char *user_info = malloc((MAX_NAME_LEN + MAX_PASSWORD_LEN + 3) * sizeof(char));
+        char input_name[MAX_NAME_LEN];
+        char input_password[MAX_PASSWORD_LEN];
+        read(socket_fd, user_info, MAX_NAME_LEN + MAX_PASSWORD_LEN + 3);
+        int p;
+        int login_success = 1;
+        for (p = 0; user_info[p] != ' ' && user_info[p] != 0; p++) {
+        }
+        strncpy(input_name, user_info, p);
+        strncpy(input_password, user_info + p + 1, strlen(user_info) - p - 1);
+        input_name[p] = '\0';
+        input_password[strlen(user_info) - p - 1] = '\0';
+        for (int i = 0; i < reg_count; i++) {
+            if (strcmp(input_name, reg_users[i]->name) == 0) {
+                if (strcmp(reg_users[i]->password, input_password) == 0) break;
+                char msg[30] = "wrong password\n";
+                write(socket_fd, msg , 30);
+                login_success = 0;
+                close(socket_fd);
+            }
+        }
+        if (!login_success) continue;
         const int curr_id = id_pool[pool_head]; // assign id
         pool_head++; // new connection created! pool--
 
         // new user log in
         users[curr_id]->id = curr_id;
         users[curr_id]->socket_fd = socket_fd;
-        read(users[curr_id]->socket_fd, users[curr_id]->name, MAX_NAME_LEN);
+        strcpy(users[curr_id]->name, input_name);
+        users[curr_id]->verified = (input_password == "");
+
+        free(user_info);
 
         char msg[64];
         sprintf(msg, "\033[38;5;159m%s\033[0m has \033[38;5;40mjoined in\033[0m\n", users[curr_id]->name);
@@ -178,7 +203,7 @@ void command_handler(char *cmd, char **args, int argc, user *curr_user) //NOLINT
         char time_str[40];
         get_localtime(time_str);
         char msg[BUFFER_SIZE];
-        sprintf(msg, "\033[38;5;222m%s\033[0m:%s  \033[38;5;114m[%s] \033[38;5;222m[private]\033[0m\n", curr_user->name,
+        sprintf(msg, "\033[36m%s\033[0m:%s  \033[38;5;114m[%s] \033[38;5;222m[private]\033[0m\n", curr_user->name,
                 args[1], time_str);
         for (int i = 0; i < pool_head; i++) {
             if (strcmp(users[i]->name, args[0]) == 0) {
