@@ -10,36 +10,21 @@
 int client_socket;
 char name[MAX_NAME_LEN];
 
-void *receive_msg(void *arg);
+void *get_input(void *);
 
 void command_handler(char *cmd,char **args,int argc,char *input);
 
-void* get_input(void* input);
+void* get_message(void* input);
+
+int check_socket_closed(int sockfd);
+
+void* check_connection(void*);
 
 void show_progress_bar();
 
 
 int main()
 {
-    client_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (client_socket < 0)
-    {
-        perror("error: socket()");
-        exit(EXIT_FAILURE);
-    }
-
-    const struct sockaddr_in server_address = {AF_INET, PORT, inet_addr(IP)};
-    if (connect(client_socket, (struct sockaddr *)&server_address, sizeof(struct sockaddr)))
-    {
-        perror("error: connect()");
-        close(client_socket);
-        exit(EXIT_FAILURE);
-    }
-
-    //show_progress_bar();
-
-    pthread_t thread;
-    pthread_create(&thread, NULL, receive_msg, (void *)(intptr_t)client_socket);
     printf("nickname: ");
     fgets(name,MAX_NAME_LEN,stdin);
     name[strcspn(name,"\n")]='\0';
@@ -49,11 +34,52 @@ int main()
     fgets(password,MAX_NAME_LEN,stdin);
     password[strcspn(password,"\n")]='\0';
     enable_echo();
+
+    client_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (client_socket < 0)
+    {
+        perror("error: socket()");
+        exit(EXIT_FAILURE);
+    }
+
+
+    const struct sockaddr_in server_address = {AF_INET, PORT, inet_addr(IP)};
+    if (connect(client_socket, (struct sockaddr *)&server_address, sizeof(struct sockaddr)))
+    {
+        perror("error: connect()");
+        close(client_socket);
+        exit(EXIT_FAILURE);
+    }
+    //show_progress_bar();
+
+    pthread_t thread;
+    pthread_create(&thread, NULL, get_input, (void *)(intptr_t)client_socket);
     char *user_info = malloc((MAX_NAME_LEN + MAX_PASSWORD_LEN + 3) * sizeof(char));
     sprintf(user_info, "%s %s", name, password);
     write(client_socket, user_info, MAX_NAME_LEN + MAX_PASSWORD_LEN + 3 * sizeof(char));
     printf("\n");
     free(password);
+    while (1)
+    {
+        char msg[BUFFER_SIZE];
+        if (recv(client_socket, msg, BUFFER_SIZE, 0) == 0)
+        {
+            printf("oops!\n");
+            pthread_cancel(thread);
+            exit(0);
+        }
+        printf("%s", msg);
+        fflush(stdout);
+    }
+
+    close(client_socket);
+    return 0;
+}
+
+
+
+void *get_input(void *)
+{
     // 获取输入
     while (1)
     {
@@ -65,30 +91,11 @@ int main()
             char **args = malloc(sizeof(char *) * MAX_ARG_COUNT);
             char *cmd = malloc(sizeof(char) * MAX_COMMAND_LEN);
             int argc = split_command(input, cmd, args);
-
             command_handler(cmd,args,argc,input);
 
             continue;
         }
-        write(client_socket, strcat(input, "\0"), BUFFER_SIZE);
-    }
-
-    close(client_socket);
-    return 0;
-}
-
-void *receive_msg(void *arg)
-{
-    int client_socket = (int)(intptr_t)arg;
-    while (1)
-    {
-        char msg[BUFFER_SIZE];
-        if (read(client_socket, msg, BUFFER_SIZE) == 0)
-        {
-            break;
-        }
-        printf("%s", msg);
-        fflush(stdout);
+        send(client_socket, strcat(input, "\0"), BUFFER_SIZE, 0);
     }
     pthread_exit(NULL);
 }
@@ -122,7 +129,7 @@ void command_handler(char *cmd,char **args,int argc,char *input)
     if(strcmp(cmd, "private") == 0 && argc == 1) {
         char *msg = malloc(sizeof(char) * 100);
         pthread_t thread;
-        pthread_create(&thread, NULL, get_input, msg);
+        pthread_create(&thread, NULL, get_message, msg);
         pthread_join(thread, NULL);
         input[strcspn(input,"\n")]=' ';
         wrap_msg(msg);
@@ -132,7 +139,7 @@ void command_handler(char *cmd,char **args,int argc,char *input)
     }
 }
 
-void *get_input(void* input) {
+void *get_message(void* input) {
     char *msg = input;
     printf("input massage: ");
     fgets(msg, 100, stdin);

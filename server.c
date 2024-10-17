@@ -32,7 +32,7 @@ void broadcast(const char *msg);
 
 void command_handler(char *cmd, char **args, int argc, user *curr_user);
 
-int check_userinfo(char* src, char* name, char* password);
+int check_userinfo(char* userinfo, char* name, char* password);
 
 int reg_count = 0;
 int pool_head = 0;
@@ -85,7 +85,11 @@ int main() {
         char input_name[MAX_NAME_LEN];
         char input_password[MAX_PASSWORD_LEN];
         read(socket_fd, user_info, MAX_NAME_LEN + MAX_PASSWORD_LEN + 3);
-        if (!check_userinfo(user_info, input_name, input_password)) continue; // refuse to connect if auth failed
+        if (!check_userinfo(user_info, input_name, input_password)) {
+            shutdown(socket_fd, SHUT_RDWR);
+            continue;
+        }
+            // refuse to connect if auth failed
 
         const int curr_id = id_pool[pool_head]; // assign id
         pool_head++; // new connection created! pool--
