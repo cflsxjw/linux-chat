@@ -139,6 +139,7 @@ void *new_user_thread(void *arg) {
     }
     pool_head--; // connection exit: pool++
     id_pool[pool_head] = curr_user->id;
+    users[curr_user->id]->socket_fd = -1;
     char *time_str = malloc(40 * sizeof(char));
     get_localtime(time_str);
     char msg[BUFFER_SIZE];

@@ -111,7 +111,7 @@ void command_handler(char *cmd,char **args,int argc,char *input)
     {
         char local_time[40];
         get_localtime(local_time);
-        printf("%s", local_time);
+        printf("%s\n", local_time);
     }
     if(strcmp(cmd, "register") == 0 && argc == 2) {
         write(client_socket,input,BUFFER_SIZE);

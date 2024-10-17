@@ -35,6 +35,7 @@ int split_command(const char *src, char *cmd, char **args)
         curr_index++;
     }
     strncpy(cmd, src + 1, curr_index - 1);
+    cmd[curr_index - 1] = '\0';
     if (!has_arg)
     {
         return 0;
