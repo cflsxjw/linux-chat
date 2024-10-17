@@ -28,7 +28,7 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-    const struct sockaddr_in server_address = {AF_INET, PORT, inet_addr("127.0.0.1")};
+    const struct sockaddr_in server_address = {AF_INET, PORT, inet_addr(IP)};
     if (connect(client_socket, (struct sockaddr *)&server_address, sizeof(struct sockaddr)))
     {
         perror("error: connect()");

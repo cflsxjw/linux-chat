@@ -4,7 +4,7 @@
 #define PORT 57260
 #define BUFFER_SIZE 1024
 #define PROGRESS_BAR_LENGTH 50
-#define IP "127.0.0.1"
+#define IP "10.132.109.121"
 #define MAX_NAME_LEN 30
 #define MAX_PASSWORD_LEN 30
 #define MAX_CONNECTIONS 100

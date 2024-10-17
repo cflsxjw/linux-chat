@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <pthread.h>
-#include <stdarg.h>
 #include "utils.h"
 #include "macros.h"
 
