@@ -13,6 +13,7 @@ typedef struct USER {
     char name[MAX_NAME_LEN];
     char **mute;
     int verified;
+    int valid;
 } user;
 
 typedef struct REG_USER {
@@ -28,11 +29,15 @@ int reuse = 1;
 
 void *new_user_thread(void *arg);
 
+void logout_user(user *curr_user);
+
 void broadcast(const char *msg);
 
 void command_handler(char *cmd, char **args, int argc, user *curr_user);
 
-int check_userinfo(char* userinfo, char* name, char* password);
+int occupancy_test(char* name, char* password, int socket_fd);
+
+int check_userinfo(char *userinfo, char *name, char *password);
 
 int reg_count = 0;
 int pool_head = 0;
@@ -85,11 +90,16 @@ int main() {
         char input_name[MAX_NAME_LEN];
         char input_password[MAX_PASSWORD_LEN];
         read(socket_fd, user_info, MAX_NAME_LEN + MAX_PASSWORD_LEN + 3);
+
+        // refuse to connect if auth failed
         if (!check_userinfo(user_info, input_name, input_password)) {
             shutdown(socket_fd, SHUT_RDWR);
             continue;
         }
-            // refuse to connect if auth failed
+
+        if(!occupancy_test(input_name, input_password, socket_fd)) {
+            continue;
+        }
 
         const int curr_id = id_pool[pool_head]; // assign id
         pool_head++; // new connection created! pool--
@@ -99,7 +109,7 @@ int main() {
         users[curr_id]->socket_fd = socket_fd;
         strcpy(users[curr_id]->name, input_name);
         users[curr_id]->verified = (strcmp(input_password, "") == 0);
-
+        users[curr_id]->valid = 1;
         char msg[64];
         sprintf(msg, "\033[38;5;159m%s\033[0m has \033[38;5;40mjoined in\033[0m\n", users[curr_id]->name);
         broadcast(msg);
@@ -113,13 +123,16 @@ int main() {
 
 void *new_user_thread(void *arg) {
     //NOLINT
+    printf("New user thread started\n");
     user *curr_user = arg;
     while (1) {
+        /*
         if (curr_user->socket_fd < 0) {
             perror("error: accept()");
         }
+        */
         char buffer[BUFFER_SIZE];
-        if (read(curr_user->socket_fd, buffer, BUFFER_SIZE) == 0) {
+        if (curr_user->valid && read(curr_user->socket_fd, buffer, BUFFER_SIZE) == 0) {
             break;
         }
         if (strcmp(buffer, "") != 0) {
@@ -130,7 +143,6 @@ void *new_user_thread(void *arg) {
                 command_handler(cmd, args, argc, curr_user);
                 continue;
             }
-
             char msg[BUFFER_SIZE];
             char *time_str = malloc(40 * sizeof(char));
             get_localtime(time_str);
@@ -141,9 +153,7 @@ void *new_user_thread(void *arg) {
             broadcast(msg);
         }
     }
-    pool_head--; // connection exit: pool++
-    id_pool[pool_head] = curr_user->id;
-    users[curr_user->id]->socket_fd = -1;
+    logout_user(curr_user);
     char *time_str = malloc(40 * sizeof(char));
     get_localtime(time_str);
     char msg[BUFFER_SIZE];
@@ -153,7 +163,14 @@ void *new_user_thread(void *arg) {
     pthread_exit(NULL);
 }
 
-int check_userinfo(char* userinfo, char* name, char* password) {
+void logout_user(user *curr_user) {
+    pool_head--; // connection exit: pool++
+    id_pool[pool_head] = curr_user->id;
+    users[curr_user->id]->valid = 0;
+    printf("exit\n");
+}
+
+int check_userinfo(char *userinfo, char *name, char *password) {
     int p;
     for (p = 0; userinfo[p] != ' ' && userinfo[p] != 0; p++) {
     }
@@ -172,7 +189,7 @@ int check_userinfo(char* userinfo, char* name, char* password) {
 
 void broadcast(const char *msg) {
     for (int i = 0; i < MAX_CONNECTIONS; i++) {
-        if (users[i]->socket_fd > 0) {
+        if (users[i]->valid && users[i]->socket_fd > 0) {
             write(users[i]->socket_fd, msg, BUFFER_SIZE);
         }
     }
@@ -182,6 +199,26 @@ void send_to(const char *msg, user *curr_user) {
     if (curr_user->socket_fd > 0) {
         write(curr_user->socket_fd, msg, BUFFER_SIZE);
     }
+}
+
+int occupancy_test(char* name, char* password, int socket_fd) {
+    for (int i = 0; i < MAX_CONNECTIONS; i++) {
+        if (users[i]->valid && strcmp(name, users[i]->name) == 0) {
+            if (strcmp(password, "") == 0) {
+                char msg[40] = "name occupied\n";
+                send(socket_fd, msg, strlen(msg), 0);
+                shutdown(socket_fd, SHUT_RDWR);
+                return 0;
+            }
+            // if verified
+            char msg[40] = "name occupied\n";
+            send(users[i]->socket_fd, msg, strlen(msg), 0);
+            shutdown(users[i]->socket_fd, SHUT_RDWR);
+            close(users[i]->socket_fd);
+            return 1;
+        }
+    }
+    return 1;
 }
 
 void command_handler(char *cmd, char **args, int argc, user *curr_user) //NOLINT

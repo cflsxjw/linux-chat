@@ -34,6 +34,10 @@ int main()
     fgets(password,MAX_NAME_LEN,stdin);
     password[strcspn(password,"\n")]='\0';
     enable_echo();
+    if (strcmp(name,"") == 0) {
+        printf("Please enter a username");
+        exit(0);
+    }
 
     client_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (client_socket < 0)
@@ -66,6 +70,7 @@ int main()
         {
             printf("oops!\n");
             pthread_cancel(thread);
+            getchar();
             exit(0);
         }
         printf("%s", msg);
@@ -92,7 +97,6 @@ void *get_input(void *)
             char *cmd = malloc(sizeof(char) * MAX_COMMAND_LEN);
             int argc = split_command(input, cmd, args);
             command_handler(cmd,args,argc,input);
-
             continue;
         }
         send(client_socket, strcat(input, "\0"), BUFFER_SIZE, 0);
