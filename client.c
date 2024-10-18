@@ -58,7 +58,7 @@ int main()
         close(client_socket);
         exit(EXIT_FAILURE);
     }
-    //show_progress_bar();
+    show_progress_bar();
 
     pthread_t thread;
     pthread_create(&thread, NULL, get_input, (void *)(intptr_t)client_socket);
@@ -157,24 +157,48 @@ void *get_message(void* input) {
 
 void show_progress_bar()
 {
+
+    int color_show[6]={34,33,32,31,30,29};
+    
     for (int i = 0; i <= PROGRESS_BAR_LENGTH; i++)
     {
         float percent = (float)i / PROGRESS_BAR_LENGTH * 100;
-        printf("\rProgress: [");
+
+        // 设置颜色
+
+        printf("\rProgress: [\033[38;5;%dm", color_show[i/10]); // 设置当前进度颜色
+
         for (int j = 0; j < PROGRESS_BAR_LENGTH; j++)
         {
             if (j < i)
             {
-                printf(COLOR_YELLOW "▮" COLOR_RESET);
+                printf("▮"); // 打印已完成部分
             }
             else
             {
-                printf(" ");
+                printf(" "); // 打印未完成部分
             }
+        }   
+        if(i<=PROGRESS_BAR_LENGTH)
+        {
+            printf("\033[0m");
         }
-        printf("] %.2f%%", percent);
+
+        printf("]%.2f%%", percent); // 重置颜色并打印百分比
+        
+ 
+
         fflush(stdout);
         usleep(20000); // 20 ms delay for a total of 1 second
+
+
+    
     }
+    //printf("Progress: [▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮]100.00%")
     printf("\n");
+    printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+    printf("\n");
+
+    printf("\033[38;5;81m\n### welcome to the linux-chat\n");
+    printf("\033[0m");
 }
