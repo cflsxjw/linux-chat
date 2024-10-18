@@ -16,8 +16,6 @@ void command_handler(char *cmd,char **args,int argc,char *input);
 
 void* get_message(void* input);
 
-int check_socket_closed(int sockfd);
-
 void* check_connection(void*);
 
 void show_progress_bar();
@@ -25,6 +23,12 @@ void show_progress_bar();
 
 int main()
 {
+    printf("  _      _                          _           _   \n");
+    printf(" | |    (_)                        | |         | |  \n");
+    printf(" | |     _ _ __  _   ___  __    ___| |__   __ _| |_ \n");
+    printf(" | |    | | '_ \\| | | \\ \\/ /   / __| '_ \\ / _` | __|\n");
+    printf(" | |____| | | | | |_| |>  <   | (__| | | | (_| | |_ \n");
+    printf(" |______|_|_| |_|\\__,_/_/\\_\\   \\___|_| |_|\\__,_|\\__|\n\n");
     printf("nickname: ");
     fgets(name,MAX_NAME_LEN,stdin);
     name[strcspn(name,"\n")]='\0';
