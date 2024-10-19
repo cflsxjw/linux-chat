@@ -108,10 +108,10 @@ int main() {
         users[curr_id]->id = curr_id;
         users[curr_id]->socket_fd = socket_fd;
         strcpy(users[curr_id]->name, input_name);
-        users[curr_id]->verified = (strcmp(input_password, "") == 0);
+        users[curr_id]->verified = (strcmp(input_password, "") != 0);
         users[curr_id]->valid = 1;
         char msg[64];
-        sprintf(msg, "\033[38;5;159m%s\033[0m has \033[38;5;40mjoined in\033[0m\n", users[curr_id]->name);
+        sprintf(msg, "\033[38;5;%dm%s\033[0m has \033[38;5;40mjoined in\033[0m\n", users[curr_id]->verified? 159:216, users[curr_id]->name);
         broadcast(msg);
         // create new thread
         pthread_t thread;
@@ -122,15 +122,11 @@ int main() {
 
 
 void *new_user_thread(void *arg) {
-    //NOLINT
-    printf("New user thread started\n");
     user *curr_user = arg;
     while (1) {
-        /*
         if (curr_user->socket_fd < 0) {
             perror("error: accept()");
         }
-        */
         char buffer[BUFFER_SIZE];
         if (curr_user->valid && read(curr_user->socket_fd, buffer, BUFFER_SIZE) == 0) {
             break;
@@ -143,21 +139,20 @@ void *new_user_thread(void *arg) {
                 command_handler(cmd, args, argc, curr_user);
                 continue;
             }
-            char msg[BUFFER_SIZE];
+            char msg[BUFFER_SIZE + MAX_SHORT_MSG_LEN];
             char *time_str = malloc(40 * sizeof(char));
             get_localtime(time_str);
-            snprintf(msg, BUFFER_SIZE + 128, "\033[36m[%s]\033[0m \033[32m%s\033[0m: %s\n", time_str, curr_user->name,
-                     buffer);
+            snprintf(msg, BUFFER_SIZE + 128, "\033[38;5;%dm%s\033[0m: %s  \033[38;5;114m[%s]\033[0m\n", curr_user->verified? 159:216, curr_user->name,
+                     buffer,time_str);
             free(time_str);
-            printf("%s", msg);
             broadcast(msg);
         }
     }
     logout_user(curr_user);
     char *time_str = malloc(40 * sizeof(char));
     get_localtime(time_str);
-    char msg[BUFFER_SIZE];
-    sprintf(msg, "\033[38;5;159m%s\033[0m \033[38;5;160mquit\033[0m  [%s]\n", curr_user->name, time_str); //NOLINT
+    char msg[BUFFER_SIZE + MAX_SHORT_MSG_LEN];
+    sprintf(msg, "\033[38;5;%dm%s\033[0m \033[38;5;160mquit\033[0m  \033[38;5;114m[%s]\n", curr_user->verified? 159:216,curr_user->name, time_str); //NOLINT
     broadcast(msg);
     free(time_str);
     pthread_exit(NULL);
@@ -167,7 +162,6 @@ void logout_user(user *curr_user) {
     pool_head--; // connection exit: pool++
     id_pool[pool_head] = curr_user->id;
     users[curr_user->id]->valid = 0;
-    printf("exit\n");
 }
 
 int check_userinfo(char *userinfo, char *name, char *password) {
@@ -205,13 +199,13 @@ int occupancy_test(char* name, char* password, int socket_fd) {
     for (int i = 0; i < MAX_CONNECTIONS; i++) {
         if (users[i]->valid && strcmp(name, users[i]->name) == 0) {
             if (strcmp(password, "") == 0) {
-                char msg[40] = "name occupied\n";
+                char msg[MAX_SHORT_MSG_LEN] = "\033[38;5;160mname occupied, try another please\033[0m\n";
                 send(socket_fd, msg, strlen(msg), 0);
                 shutdown(socket_fd, SHUT_RDWR);
                 return 0;
             }
             // if verified
-            char msg[40] = "name occupied\n";
+            char msg[MAX_SHORT_MSG_LEN] = "\033[38;5;160mregistered user logs in, you have been kicked out\033[0m\n";
             send(users[i]->socket_fd, msg, strlen(msg), 0);
             shutdown(users[i]->socket_fd, SHUT_RDWR);
             close(users[i]->socket_fd);
@@ -224,6 +218,12 @@ int occupancy_test(char* name, char* password, int socket_fd) {
 void command_handler(char *cmd, char **args, int argc, user *curr_user) //NOLINT
 {
     if (strcmp(cmd, "register") == 0 && argc == 2) {
+        for (int i = 0; i < reg_count; i++) {
+            if (strcmp(reg_users[i]->name,args[0]) == 0) {
+                char msg[MAX_SHORT_MSG_LEN] = "\033[38;5;160mname have been registered\033[0m\n";
+                send_to(msg, curr_user);
+            }
+        }
         reg_users[reg_count] = malloc(sizeof(reg_user));
         strcpy(reg_users[reg_count]->name, args[0]); //NOLINT
         strcpy(reg_users[reg_count]->password, args[1]);
@@ -237,24 +237,32 @@ void command_handler(char *cmd, char **args, int argc, user *curr_user) //NOLINT
     if (strcmp(cmd, "ls") == 0 && argc == 0) {
         char buffer[BUFFER_SIZE] = "";
         for (int i = 0; i < pool_head; i++) {
-            int len = (int) strlen(users[i]->name);
-            if (len > 0) {
-                strcat(buffer, users[i]->name);
-                strcat(buffer, "\n");
+            if (users[i]->valid) {
+                char name[40];
+                sprintf(name, "\033[38;5;%dm%s\033[0m\n", users[i]->verified? 159:216, users[i]->name);
+                strcat(buffer, name);
             }
         }
         write(curr_user->socket_fd, buffer, BUFFER_SIZE);
     }
     if (strcmp(cmd, "private") == 0 && argc == 2) {
+        if (strcmp(args[0], curr_user->name) == 0) {
+            char msg[MAX_SHORT_MSG_LEN] = "\033[38;5;160mcan't send massage to yourself\033[0m\n";
+            send_to(msg, curr_user);
+            return;
+        }
         unwrap_msg(args[1]);
         char time_str[40];
         get_localtime(time_str);
-        char msg[BUFFER_SIZE];
-        sprintf(msg, "\033[36m%s\033[0m:%s  \033[38;5;114m[%s] \033[38;5;222m[private]\033[0m\n", curr_user->name,
+        char msg[BUFFER_SIZE + MAX_SHORT_MSG_LEN];
+        sprintf(msg, "\033[38;5;%dm%s\033[0m:%s  \033[38;5;114m[%s] \033[38;5;222m[private]\033[0m\n", curr_user->verified? 159:216,curr_user->name,
                 args[1], time_str);
         for (int i = 0; i < pool_head; i++) {
             if (strcmp(users[i]->name, args[0]) == 0) {
                 send_to(msg, users[i]);
+                msg[strcspn(msg,"\n")]='\0';
+                sprintf(msg, "%s \033[38;5;183m[To: %s]\033[0m", msg, users[i]->name);
+                send_to(msg, curr_user);
             }
         }
     }

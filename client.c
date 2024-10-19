@@ -23,12 +23,14 @@ void show_progress_bar();
 
 int main()
 {
+    printf("\033[38;5;195m");
     printf("  _      _                          _           _   \n");
     printf(" | |    (_)                        | |         | |  \n");
     printf(" | |     _ _ __  _   ___  __    ___| |__   __ _| |_ \n");
     printf(" | |    | | '_ \\| | | \\ \\/ /   / __| '_ \\ / _` | __|\n");
     printf(" | |____| | | | | |_| |>  <   | (__| | | | (_| | |_ \n");
     printf(" |______|_|_| |_|\\__,_/_/\\_\\   \\___|_| |_|\\__,_|\\__|\n\n");
+    printf("\033[0m");
     printf("nickname: ");
     fgets(name,MAX_NAME_LEN,stdin);
     name[strcspn(name,"\n")]='\0';
@@ -95,6 +97,12 @@ void *get_input(void *)
         char input[BUFFER_SIZE];
         fgets(input, BUFFER_SIZE, stdin);
         input[strcspn(input,"\n")]='\0';
+        printf("\033[A\r");
+        for (int i = 0; i <= strlen(input); i++) {
+            printf(" ");
+            fflush(stdout);
+        }
+        printf("\r");
         if (input[0] == '/')
         {
             char **args = malloc(sizeof(char *) * MAX_ARG_COUNT);
@@ -116,6 +124,7 @@ void command_handler(char *cmd,char **args,int argc,char *input)
         printf("    * time: 打印当前时间\n");
         printf("    * ls: 列出所有在线用户\n");
         printf("    * private: 私信用户\n");
+        printf("    * register: 注册\n");
     }
     if (strcmp(cmd, "exit")==0 && argc == 0)
     {
@@ -152,53 +161,27 @@ void *get_message(void* input) {
     printf("input massage: ");
     fgets(msg, 100, stdin);
     msg[strcspn(msg,"\n")]=0;
+    printf("\033[A\r");
     pthread_exit(NULL);
 }
 
 void show_progress_bar()
 {
-
-    int color_show[6]={34,33,32,31,30,29};
-    
+    int colors[6]={34,33,32,31,30,29};
     for (int i = 0; i <= PROGRESS_BAR_LENGTH; i++)
     {
         float percent = (float)i / PROGRESS_BAR_LENGTH * 100;
-
         // 设置颜色
-
-        printf("\rProgress: [\033[38;5;%dm", color_show[i/10]); // 设置当前进度颜色
-
+        printf("\rProgress: [\033[38;5;%dm", colors[i/10]); // 设置当前进度颜色
         for (int j = 0; j < PROGRESS_BAR_LENGTH; j++)
         {
-            if (j < i)
-            {
-                printf("▮"); // 打印已完成部分
-            }
-            else
-            {
-                printf(" "); // 打印未完成部分
-            }
+            printf(j < i? "▮":" "); // 打印已完成部分
         }   
-        if(i<=PROGRESS_BAR_LENGTH)
-        {
-            printf("\033[0m");
-        }
-
+        printf("\033[0m");
         printf("]%.2f%%", percent); // 重置颜色并打印百分比
-        
- 
-
         fflush(stdout);
         usleep(20000); // 20 ms delay for a total of 1 second
-
-
-    
     }
-    //printf("Progress: [▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮]100.00%")
-    printf("\n");
-    printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-    printf("\n");
-
-    printf("\033[38;5;81m\n### welcome to the linux-chat\n");
-    printf("\033[0m");
+    printf("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+    printf("\033[38;5;81m\n### welcome to the linux-chat\n\033[0m");
 }
