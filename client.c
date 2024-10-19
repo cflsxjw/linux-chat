@@ -97,7 +97,7 @@ void *get_input(void *)
         char input[BUFFER_SIZE];
         fgets(input, BUFFER_SIZE, stdin);
         input[strcspn(input,"\n")]='\0';
-        printf("\033[A\r");
+        
         for (int i = 0; i <= strlen(input); i++) {
             printf(" ");
             fflush(stdout);
@@ -111,6 +111,7 @@ void *get_input(void *)
             command_handler(cmd,args,argc,input);
             continue;
         }
+        printf("\033[A\r");
         send(client_socket, strcat(input, "\0"), BUFFER_SIZE, 0);
     }
     pthread_exit(NULL);
@@ -144,6 +145,7 @@ void command_handler(char *cmd,char **args,int argc,char *input)
         write(client_socket,input,BUFFER_SIZE);
     }
     if(strcmp(cmd, "private") == 0 && argc == 1) {
+        printf("\033[A\r");
         char *msg = malloc(sizeof(char) * 100);
         pthread_t thread;
         pthread_create(&thread, NULL, get_message, msg);
