@@ -43,6 +43,8 @@ int reg_count = 0;
 int pool_head = 0;
 
 int main() {
+    FILE *create_users=fopen("users","w+");
+    fclose(create_users);
     // 读取注册用户
     FILE *reg_user_list = fopen("users", "r");
     if (reg_user_list == NULL) {
@@ -110,7 +112,7 @@ int main() {
         strcpy(users[curr_id]->name, input_name);
         users[curr_id]->verified = (strcmp(input_password, "") != 0);
         users[curr_id]->valid = 1;
-        char msg[64];
+        char msg[256];
         sprintf(msg, "\033[38;5;%dm%s\033[0m has \033[38;5;40mjoined in\033[0m\n", users[curr_id]->verified? 159:216, users[curr_id]->name);
         broadcast(msg);
         // create new thread
@@ -152,7 +154,7 @@ void *new_user_thread(void *arg) {
     char *time_str = malloc(40 * sizeof(char));
     get_localtime(time_str);
     char msg[BUFFER_SIZE + MAX_SHORT_MSG_LEN];
-    sprintf(msg, "\033[38;5;%dm%s\033[0m \033[38;5;160mquit\033[0m  \033[38;5;114m[%s]\n", curr_user->verified? 159:216,curr_user->name, time_str); //NOLINT
+    sprintf(msg, "\033[38;5;%dm%s\033[0m \033[38;5;160mquit\033[0m  \033[38;5;114m[%s]\n\033[0m", curr_user->verified? 159:216,curr_user->name, time_str); //NOLINT
     broadcast(msg);
     free(time_str);
     pthread_exit(NULL);
@@ -238,7 +240,7 @@ void command_handler(char *cmd, char **args, int argc, user *curr_user) //NOLINT
         char buffer[BUFFER_SIZE] = "";
         for (int i = 0; i < pool_head; i++) {
             if (users[i]->valid) {
-                char name[40];
+                char name[64];
                 sprintf(name, "\033[38;5;%dm%s\033[0m\n", users[i]->verified? 159:216, users[i]->name);
                 strcat(buffer, name);
             }
@@ -254,15 +256,21 @@ void command_handler(char *cmd, char **args, int argc, user *curr_user) //NOLINT
         unwrap_msg(args[1]);
         char time_str[40];
         get_localtime(time_str);
+
         char msg[BUFFER_SIZE + MAX_SHORT_MSG_LEN];
+
+
         sprintf(msg, "\033[38;5;%dm%s\033[0m:%s  \033[38;5;114m[%s] \033[38;5;222m[private]\033[0m\n", curr_user->verified? 159:216,curr_user->name,
                 args[1], time_str);
         for (int i = 0; i < pool_head; i++) {
             if (strcmp(users[i]->name, args[0]) == 0) {
                 send_to(msg, users[i]);
                 msg[strcspn(msg,"\n")]='\0';
-                sprintf(msg, "%s \033[38;5;183m[To: %s]\033[0m", msg, users[i]->name);
-                send_to(msg, curr_user);
+
+                char temp_msg[strlen(msg)+128];
+
+                sprintf(temp_msg, "%s \033[38;5;183m[To: %s]\033[0m", msg, users[i]->name);
+                send_to(temp_msg, curr_user);
             }
         }
     }
